@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Rugby Pro - Acceso con PIN</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f4f7f6; font-family: 'Segoe UI', sans-serif; }
+        .auth-box { max-width: 450px; margin: 60px auto; }
+        .app-box { display: none; padding: 20px; }
+        .navbar-rugby { background: #1a3c34; color: white; padding: 1rem; margin-bottom: 2rem; border-radius: 10px; }
+        .card { border: none; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        .pin-display { background-color: #fff9db; border: 2px dashed #fab005; padding: 15px; border-radius: 10px; margin-top: 15px; }
+        .badge-pin { font-size: 1.5rem; letter-spacing: 5px; color: #e67e22; }
+    </style>
+</head>
+<body>
+
+    <div id="auth-section" class="auth-box">
+        <div class="card p-4">
+            <h3 class="text-center mb-4">🏉 Rugby App Secure</h3>
+
+            <ul class="nav nav-pills nav-justified mb-4">
+                <li class="nav-item">
+                    <button id="tab-login" class="nav-link active" onclick="cambiarTab('login')">Entrar</button>
+                </li>
+                <li class="nav-item">
+                    <button id="tab-reg" class="nav-link" onclick="cambiarTab('reg')">Nuevo Usuario</button>
+                </li>
+            </ul>
+
+            <div id="form-body">
+                <div class="mb-2">
+                    <label class="small fw-bold">Usuario</label>
+                    <input type="text" id="username" class="form-control" placeholder="Ej: pablo_rugby">
+                </div>
+                <div class="mb-3">
+                    <label class="small fw-bold">Contraseña</label>
+                    <input type="password" id="password" class="form-control" placeholder="••••••••">
+                </div>
+
+                <div id="pin-area" class="mb-4">
+                    <label class="small fw-bold text-primary">🔢 Tu PIN de Seguridad (4 dígitos)</label>
+                    <input type="text" id="security_token" class="form-control border-primary" placeholder="Introduce tu PIN">
+                </div>
+
+                <button id="btn-auth" onclick="ejecutarAuth()" class="btn btn-success w-100 fw-bold shadow-sm">Confirmar</button>
+            </div>
+
+            <div id="msg-container" class="mt-3 text-center">
+                <p id="msg" class="small fw-bold"></p>
+                <div id="pin-result" style="display: none;" class="pin-display">
+                    <span class="small d-block text-muted">ANOTA TU PIN PERSONAL:</span>
+                    <strong class="badge-pin" id="pin-number">0000</strong>
+                    <p class="mb-0 mt-2 x-small text-danger">⚠️ Sin este número no podrás entrar.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-section" class="app-box container">
+        <div class="navbar-rugby d-flex justify-content-between align-items-center shadow">
+            <h4 class="m-0">🛡️ Panel: <span id="user-display" class="text-warning"></span></h4>
+            <button onclick="logout()" class="btn btn-outline-light btn-sm fw-bold">Cerrar Sesión</button>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card p-4 mb-4">
+                    <h5>➕ Nuevo Jugador</h5>
+                    <hr>
+                    <input type="text" id="j-nombre" class="form-control mb-2" placeholder="Nombre">
+                    <input type="text" id="j-pos" class="form-control mb-2" placeholder="Posición">
+                    <input type="text" id="j-eq" class="form-control mb-3" placeholder="Equipo">
+                    <button onclick="crearJugador()" class="btn btn-primary w-100 fw-bold">Guardar Jugador</button>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="card p-4">
+                    <h5>📋 Plantilla en PostgreSQL</h5>
+                    <table class="table table-hover mt-3">
+                        <thead class="table-dark">
+                            <tr><th>ID</th><th>Nombre</th><th>Posición</th><th>Equipo</th></tr>
+                        </thead>
+                        <tbody id="tabla"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Deja el API vacío si usas Nginx o pon tu IP: https://10.50.58.13
+        const API = ""; 
+        let modo = 'login';
+
+        function cambiarTab(m) {
+            modo = m;
+            document.getElementById('btn-auth').innerText = m === 'login' ? 'Entrar al Sistema' : 'Crear mi Cuenta';
+            document.getElementById('tab-login').classList.toggle('active', m === 'login');
+            document.getElementById('tab-reg').classList.toggle('active', m === 'reg');
+            document.getElementById('pin-area').style.display = m === 'login' ? 'block' : 'none';
+            document.getElementById('pin-result').style.display = 'none';
+            document.getElementById('msg').innerText = "";
+        }
+
+        async function ejecutarAuth() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            const st = document.getElementById('security_token').value;
+            const msg = document.getElementById('msg');
+            const pinResult = document.getElementById('pin-result');
+
+            if (modo === 'reg') {
+                // REGISTRO
+                try {
+                    const res = await fetch(`${API}/register?username=${u}&password=${p}`, { method: 'POST' });
+                    const data = await res.json();
+                    if (res.ok) {
+                        msg.className = "text-success";
+                        msg.innerText = "¡Usuario creado!";
+                        document.getElementById('pin-number').innerText = data.tu_pin_de_seguridad;
+                        pinResult.style.display = 'block';
+                    } else {
+                        msg.className = "text-danger";
+                        msg.innerText = data.detail || "Error al registrar";
+                    }
+                } catch (e) { console.error(e); }
+            } else {
+                // LOGIN
+                const form = new FormData();
+                form.append('username', u);
+                form.append('password', p);
+
+                try {
+                    const res = await fetch(`${API}/token?security_token=${st}`, {
+                        method: 'POST',
+                        body: form
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        localStorage.setItem('token', data.access_token);
+                        localStorage.setItem('user', u);
+                        iniciarApp();
+                    } else {
+                        const errorData = await res.json();
+                        msg.className = "text-danger";
+                        msg.innerText = errorData.detail || "PIN o Clave incorrectos";
+                    }
+                } catch (e) { console.error(e); }
+            }
+        }
+
+        async function cargarTabla() {
+            const token = localStorage.getItem('token');
+            try {
+                const res = await fetch(`${API}/jugadores/`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.status === 401) {
+                    logout();
+                    return;
+                }
+                const data = await res.json();
+                document.getElementById('tabla').innerHTML = data.map(j => `
+                    <tr>
+                        <td>#${j.id}</td>
+                        <td><strong>${j.nombre}</strong></td>
+                        <td><span class="badge bg-success">${j.posicion}</span></td>
+                        <td>${j.equipo}</td>
+                    </tr>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function crearJugador() {
+            const token = localStorage.getItem('token');
+            const nuevo = {
+                nombre: document.getElementById('j-nombre').value,
+                posicion: document.getElementById('j-pos').value,
+                equipo: document.getElementById('j-eq').value
+            };
+
+            try {
+                const res = await fetch(`${API}/jugadores/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(nuevo)
+                });
+                if (res.ok) {
+                    document.getElementById('j-nombre').value = "";
+                    document.getElementById('j-pos').value = "";
+                    document.getElementById('j-eq').value = "";
+                    cargarTabla();
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function iniciarApp() {
+            document.getElementById('auth-section').style.display = 'none';
+            document.getElementById('app-section').style.display = 'block';
+            document.getElementById('user-display').innerText = localStorage.getItem('user');
+            cargarTabla();
+        }
+
+        function logout() {
+            localStorage.clear();
+            location.reload();
+        }
+
+        if (localStorage.getItem('token')) iniciarApp();
+    </script>
+</body>
+</html>
