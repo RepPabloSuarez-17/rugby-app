@@ -41,7 +41,7 @@
 
                 <div id="pin-area" class="mb-4">
                     <label class="small fw-bold text-primary">🔢 Tu PIN de Seguridad (4 dígitos)</label>
-                    <input type="text" id="security_token" class="form-control border-primary" placeholder="Introduce tu PIN">
+                    <input type="text" id="security_token" class="form-control border-primary" placeholder="Introduce tu PIN personal">
                 </div>
 
                 <button id="btn-auth" onclick="ejecutarAuth()" class="btn btn-success w-100 fw-bold shadow-sm">Confirmar</button>
@@ -75,6 +75,7 @@
                     <button onclick="crearJugador()" class="btn btn-primary w-100 fw-bold">Guardar Jugador</button>
                 </div>
             </div>
+
             <div class="col-md-8">
                 <div class="card p-4">
                     <h5>📋 Plantilla en PostgreSQL</h5>
@@ -90,8 +91,8 @@
     </div>
 
     <script>
-        // Deja el API vacío si usas Nginx o pon tu IP: https://10.50.58.13
-        const API = ""; 
+        // Configuramos la IP del servidor
+        const API = "https://10.50.58.13";
         let modo = 'login';
 
         function cambiarTab(m) {
@@ -99,6 +100,8 @@
             document.getElementById('btn-auth').innerText = m === 'login' ? 'Entrar al Sistema' : 'Crear mi Cuenta';
             document.getElementById('tab-login').classList.toggle('active', m === 'login');
             document.getElementById('tab-reg').classList.toggle('active', m === 'reg');
+
+            // El PIN se pide en el login, pero no en el registro (el registro lo genera)
             document.getElementById('pin-area').style.display = m === 'login' ? 'block' : 'none';
             document.getElementById('pin-result').style.display = 'none';
             document.getElementById('msg').innerText = "";
@@ -107,71 +110,69 @@
         async function ejecutarAuth() {
             const u = document.getElementById('username').value;
             const p = document.getElementById('password').value;
-            const st = document.getElementById('security_token').value;
             const msg = document.getElementById('msg');
             const pinResult = document.getElementById('pin-result');
 
             if (modo === 'reg') {
-                // REGISTRO
-                try {
-                    const res = await fetch(`${API}/register?username=${u}&password=${p}`, { method: 'POST' });
-                    const data = await res.json();
-                    if (res.ok) {
-                        msg.className = "text-success";
-                        msg.innerText = "¡Usuario creado!";
-                        document.getElementById('pin-number').innerText = data.tu_pin_de_seguridad;
-                        pinResult.style.display = 'block';
-                    } else {
-                        msg.className = "text-danger";
-                        msg.innerText = data.detail || "Error al registrar";
-                    }
-                } catch (e) { console.error(e); }
+                // REGISTRO DE NUEVO USUARIO
+                const res = await fetch(`${API}/register?username=${u}&password=${p}`, { method: 'POST' });
+                const data = await res.json();
+
+                if (res.ok) {
+                    msg.className = "text-success";
+                    msg.innerText = "¡Usuario creado correctamente!";
+                    document.getElementById('pin-number').innerText = data.tu_pin_de_seguridad;
+                    pinResult.style.display = 'block';
+                } else {
+                    msg.className = "text-danger";
+                    msg.innerText = data.detail || "Error al registrar";
+                }
             } else {
-                // LOGIN
+                // LOGIN CON PIN
+                const st = document.getElementById('security_token').value;
                 const form = new FormData();
                 form.append('username', u);
                 form.append('password', p);
 
-                try {
-                    const res = await fetch(`${API}/token?security_token=${st}`, {
-                        method: 'POST',
-                        body: form
-                    });
+                // IMPORTANTE: Enviamos el security_token como parámetro en la URL
+                const res = await fetch(`${API}/token?security_token=${st}`, {
+                    method: 'POST',
+                    body: form
+                });
 
-                    if (res.ok) {
-                        const data = await res.json();
-                        localStorage.setItem('token', data.access_token);
-                        localStorage.setItem('user', u);
-                        iniciarApp();
-                    } else {
-                        const errorData = await res.json();
-                        msg.className = "text-danger";
-                        msg.innerText = errorData.detail || "PIN o Clave incorrectos";
-                    }
-                } catch (e) { console.error(e); }
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem('token', data.access_token);
+                    localStorage.setItem('user', u);
+                    iniciarApp();
+                } else {
+                    const errorData = await res.json();
+                    msg.className = "text-danger";
+                    msg.innerText = errorData.detail || "Credenciales o PIN incorrectos";
+                }
             }
         }
 
         async function cargarTabla() {
             const token = localStorage.getItem('token');
-            try {
-                const res = await fetch(`${API}/jugadores/`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (res.status === 401) {
-                    logout();
-                    return;
-                }
-                const data = await res.json();
-                document.getElementById('tabla').innerHTML = data.map(j => `
-                    <tr>
-                        <td>#${j.id}</td>
-                        <td><strong>${j.nombre}</strong></td>
-                        <td><span class="badge bg-success">${j.posicion}</span></td>
-                        <td>${j.equipo}</td>
-                    </tr>
-                `).join('');
-            } catch (e) { console.error(e); }
+            const res = await fetch(`${API}/jugadores/`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (res.status === 401) {
+                logout();
+                return;
+            }
+
+            const data = await res.json();
+            document.getElementById('tabla').innerHTML = data.map(j => `
+                <tr>
+                    <td>#${j.id}</td>
+                    <td><strong>${j.nombre}</strong></td>
+                    <td><span class="badge bg-success">${j.posicion}</span></td>
+                    <td>${j.equipo}</td>
+                </tr>
+            `).join('');
         }
 
         async function crearJugador() {
@@ -182,22 +183,21 @@
                 equipo: document.getElementById('j-eq').value
             };
 
-            try {
-                const res = await fetch(`${API}/jugadores/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify(nuevo)
-                });
-                if (res.ok) {
-                    document.getElementById('j-nombre').value = "";
-                    document.getElementById('j-pos').value = "";
-                    document.getElementById('j-eq').value = "";
-                    cargarTabla();
-                }
-            } catch (e) { console.error(e); }
+            const res = await fetch(`${API}/jugadores/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(nuevo)
+            });
+
+            if (res.ok) {
+                document.getElementById('j-nombre').value = "";
+                document.getElementById('j-pos').value = "";
+                document.getElementById('j-eq').value = "";
+                cargarTabla();
+            }
         }
 
         function iniciarApp() {
@@ -212,6 +212,7 @@
             location.reload();
         }
 
+        // Si ya hay un token guardado, entramos directamente
         if (localStorage.getItem('token')) iniciarApp();
     </script>
 </body>
