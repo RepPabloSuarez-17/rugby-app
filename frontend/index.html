@@ -10,9 +10,8 @@
         .auth-box { display: none; padding: 20px; }
         .app-box-container { display: none; padding: 20px; }
         .card { border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); border: none; }
-        .card-header { border-radius: 15px 15px 0 0 !important; }
-        .nav-pills .nav-link { border: none; padding: 10px 25px; font-weight: 500; transition: 0.3s; }
-        .nav-pills .nav-link.active { background-color: #1a237e; box-shadow: 0 4px 10px rgba(26, 35, 126, 0.3); }
+        .nav-pills .nav-link { border: none; padding: 10px 25px; font-weight: 500; transition: 0.3s; cursor: pointer; }
+        .nav-pills .nav-link.active { background-color: #1a237e; color: white !important; }
         .form-control { border-radius: 8px; border: 2px dashed #fab005; padding: 12px; margin-top: 15px; }
         .pin-display { font-size: 1.5rem; letter-spacing: 5px; color: #e67e22; }
     </style>
@@ -22,13 +21,12 @@
 <div id="auth-section" class="auth-section">
     <div class="card auth-box" style="display: block; width: 400px;">
         <h3 class="text-center mb-4">🏉 Rugby App Secure</h3>
-
         <ul class="nav nav-pills nav-justified mb-4">
             <li class="nav-item">
-                <button id="tab-login" class="nav-link active" onclick="cambiarTab('login')">Entrar</button>
+                <button id="tab-login" class="nav-link active">Entrar</button>
             </li>
             <li class="nav-item">
-                <button id="tab-reg" class="nav-link" onclick="cambiarTab('reg')">Nuevo Usuario</button>
+                <button id="tab-reg" class="nav-link">Nuevo Usuario</button>
             </li>
         </ul>
 
@@ -38,35 +36,31 @@
                 <input type="text" id="username" class="form-control" placeholder="Ej: pablo_rugby">
             </div>
             <div class="mb-3">
-                <label class="small fw-bold">Contraseña/Label</label>
+                <label class="small fw-bold">Contraseña</label>
                 <input type="password" id="password" class="form-control" placeholder="********">
             </div>
-
-            <div id="pin-area" class="mb-4" style="display: block;">
-                <label class="small fw-bold text-primary">🛡️ Tu PIN de Seguridad (4 dígitos)</label>
+            <div id="pin-area" class="mb-4">
+                <label class="small fw-bold text-primary">🛡️ Tu PIN de Seguridad</label>
                 <input type="text" id="security_token" class="form-control border-primary" placeholder="Introduce tu PIN">
             </div>
-
-            <button id="btn-auth" onclick="ejecutarAuth()" class="btn btn-success w-100 fw-bold shadow-sm">Entrar al Sistema</button>
+            <button id="btn-auth" class="btn btn-success w-100 fw-bold shadow-sm">Entrar al Sistema</button>
         </div>
 
         <div id="msg-container" class="mt-3 text-center">
             <p id="msg" class="small fw-bold"></p>
             <div id="pin-result" style="display: none;" class="pin-display">
-                <strong class="badge bg-light text-dark shadow-sm">ANOTA TU PIN PERSONAL</strong>
+                <strong class="badge bg-light text-dark shadow-sm">ANOTA TU PIN</strong>
                 <span id="pin-number" class="d-block mt-2 text-warning">0000</span>
-                <p class="mb-0 mt-2 small text-danger">⚠️ Sin este número no podrás entrar.</p>
             </div>
         </div>
     </div>
 </div>
 
 <div id="app-section" class="app-box-container">
-    <nav class="navbar-rugby d-flex justify-content-between align-items-center shadow-sm">
+    <nav class="navbar bg-dark text-white p-3 d-flex justify-content-between align-items-center shadow-sm">
         <h4 class="m-0">🏉 Panel <span id="user-display" class="text-warning"></span></h4>
-        <button onclick="logout()" class="btn btn-outline-light btn-sm fw-bold">Cerrar Sesión</button>
+        <button id="btn-logout" class="btn btn-outline-light btn-sm fw-bold">Cerrar Sesión</button>
     </nav>
-
     <div class="row mt-4">
         <div class="col-md-4">
             <div class="card p-4 mb-4">
@@ -74,7 +68,7 @@
                 <input type="text" id="j-nombre" class="form-control mb-2" placeholder="Nombre">
                 <input type="text" id="j-pos" class="form-control mb-2" placeholder="Posición">
                 <input type="text" id="j-eq" class="form-control mb-3" placeholder="Equipo">
-                <button onclick="crearJugador()" class="btn btn-primary w-100 fw-bold">Guardar Jugador</button>
+                <button id="btn-save" class="btn btn-primary w-100 fw-bold">Guardar Jugador</button>
             </div>
         </div>
         <div class="col-md-8">
@@ -91,133 +85,6 @@
     </div>
 </div>
 
-<script>
-    // --- ESTA ES LA LÍNEA CLAVE QUE FALTABA ---
-    // Nginx reenvía todo lo que empieza por "/api" hacia FastAPI
-    const API = '/api'; 
-    
-    let mode = 'login';
-
-    function cambiarTab(a) {
-        mode = a;
-        document.getElementById('btn-auth').innerText = a === 'login' ? 'Entrar al Sistema' : 'Crear mi Cuenta';
-        document.getElementById('tab-login').classList.toggle('active', a === 'login');
-        document.getElementById('tab-reg').classList.toggle('active', a === 'reg');
-        document.getElementById('pin-area').style.display = a === 'login' ? 'block' : 'none';
-        document.getElementById('pin-result').style.display = 'none';
-        document.getElementById('msg').innerText = '';
-    }
-
-    async function ejecutarAuth() {
-        const u = document.getElementById('username').value;
-        const p = document.getElementById('password').value;
-        const st = document.getElementById('security_token').value;
-        const msg = document.getElementById('msg');
-        const pinResult = document.getElementById('pin-result');
-
-        if (mode === 'reg') {
-            // REGISTRO (Ej: /api/register)
-            try {
-                const res = await fetch(`${API}/register?username=${u}&password=${p}`, { method: 'POST' });
-                const data = await res.json();
-                if (res.ok) {
-                    msg.className = 'text-success';
-                    msg.innerText = '¡Usuario creado!';
-                    document.getElementById('pin-number').innerText = data.tu_pin_de_seguridad;
-                    pinResult.style.display = 'block';
-                } else {
-                    msg.className = 'text-danger';
-                    msg.innerText = data.detail || 'Error al registrar';
-                }
-            } catch (e) { console.error(e); }
-        } else {
-            // LOGIN (Ej: /api/token)
-            const form = new FormData();
-            form.append('username', u);
-            form.append('password', p);
-
-            try {
-                const res = await fetch(`${API}/token?security_token=${st}`, {
-                    method: 'POST',
-                    body: form
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    localStorage.setItem('token', data.access_token);
-                    localStorage.setItem('user', u);
-                    iniciarApp();
-                } else {
-                    const errorData = await res.json();
-                    msg.className = 'text-danger';
-                    msg.innerText = errorData.detail || 'PIN o Clave incorrectos';
-                }
-            } catch (e) { console.error(e); }
-        }
-    }
-
-    async function cargarTabla() {
-        const token = localStorage.getItem('token');
-        try {
-            const res = await fetch(`${API}/jugadores/`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.status === 401) {
-                logout();
-                return;
-            }
-            const data = await res.json();
-            document.getElementById('tabla').innerHTML = data.map(j => `
-                <tr>
-                    <td>#${j.id}</td>
-                    <td><strong>${j.nombre}</strong></td>
-                    <td><span class="badge bg-success">${j.posicion}</span></td>
-                    <td>${j.equipo}</td>
-                </tr>
-            `).join('');
-        } catch (e) { console.error(e); }
-    }
-
-    async function crearJugador() {
-        const token = localStorage.getItem('token');
-        const nuevo = {
-            nombre: document.getElementById('j-nombre').value,
-            posicion: document.getElementById('j-pos').value,
-            equipo: document.getElementById('j-eq').value
-        };
-
-        try {
-            const res = await fetch(`${API}/jugadores/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(nuevo)
-            });
-            if (res.ok) {
-                document.getElementById('j-nombre').value = "";
-                document.getElementById('j-pos').value = "";
-                document.getElementById('j-eq').value = "";
-                cargarTabla();
-            }
-        } catch (e) { console.error(e); }
-    }
-
-    function iniciarApp() {
-        document.getElementById('auth-section').style.display = 'none';
-        document.getElementById('app-section').style.display = 'block';
-        document.getElementById('user-display').innerText = localStorage.getItem('user');
-        cargarTabla();
-    }
-
-    function logout() {
-        localStorage.clear();
-        location.reload();
-    }
-
-    if (localStorage.getItem('token')) iniciarApp();
-
-</script>
-
+<script src="app.js"></script>
 </body>
 </html>
