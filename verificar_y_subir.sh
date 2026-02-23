@@ -1,19 +1,34 @@
 #!/bin/bash
 echo "🧪 Sincronizando dependencias y ejecutando Pytest..."
 
-# 1. Instalación de dependencias para el test local
+# 1. Asegurar herramientas
 pip install pytest httpx sqlalchemy psycopg2-binary > /dev/null 2>&1
 
-# 2. Levantar la base de datos y esperar a que acepte conexiones
+# 2. Reinicio limpio de la DB para asegurar mapeo de puertos
+sudo docker-compose stop db
 sudo docker-compose up -d db
-echo "⏳ Esperando a que la base de datos esté lista..."
-sleep 8
+echo "⏳ Esperando 12 segundos a que la base de datos acepte conexiones..."
+sleep 12
+
+# --- PRUEBA DE INTEGRIDAD DE DATOS ---
+echo "🔍 Verificando salud de las tablas de Rugby..."
+DB_TEST=$(sudo docker-compose exec -T db psql -U rugby_admin -d rugby_db -c "SELECT count(*) FROM jugadores;" 2>/dev/null)
+
+if [ $? -eq 0 ]; then
+    echo "✅ Base de datos operativa y con tablas creadas."
+else
+    echo "❌ ERROR: La base de datos no responde internamente. Revisa logs con 'docker logs rugby-app_db_1'"
+    exit 1
+fi
 
 # 3. Configurar entorno para el test
 export PYTHONPATH=$PYTHONPATH:$(pwd)/backend
 export DB_HOST=localhost
+export POSTGRES_USER=rugby_admin
+export POSTGRES_PASSWORD=Vir-24
+export POSTGRES_DB=rugby_db
 
-# 4. Ejecutar el test de tu imagen
+# 4. Ejecutar prueba
 python3 -m pytest backend/test_main.py
 
 if [ $? -eq 0 ]; then
@@ -21,19 +36,19 @@ if [ $? -eq 0 ]; then
     sudo docker-compose up -d --build
     sleep 5
     
-    # Verificamos si la web responde por HTTPS
     STATUS=$(curl -o /dev/null -s -w "%{http_code}" -k https://localhost)
     
     if [ "$STATUS" -eq 200 ]; then
-        echo "🚀 Todo funcionando. Subiendo cambios a GitHub..."
+        echo "🚀 Todo OK. Sincronizando a GitHub..."
         git add .
-        git commit -m "Fix: Conexión de base de datos validada y botones operativos"
-        git push origin main
+        git commit -m "Fix: Test de conexión localhost validado"
+        git push origin main --force
+        echo "🎉 ¡Hecho!"
     else
-        echo "❌ ERROR: La web no responde (Status $STATUS). Revisa Nginx."
+        echo "❌ ERROR: Web da Status $STATUS. Revisa Nginx."
         exit 1
     fi
 else
-    echo "❌ ERROR: Pytest ha fallado. Revisa la conexión en backend/database.py"
+    echo "❌ ERROR: Pytest falló con Connection Refused. ¿Está el puerto 5432 libre?"
     exit 1
 fi

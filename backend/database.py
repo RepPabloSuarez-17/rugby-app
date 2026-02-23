@@ -3,15 +3,23 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
 
-# Construimos la URL. "db" es el nombre del servicio en el docker-compose
-SQLALCHEMY_DATABASE_URL = f"postgresql://{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}@db:5432/{os.getenv('POSTGRES_DB')}"
+# --- LÓGICA DE CONEXIÓN DINÁMICA ---
+# Extraemos variables o usamos valores por defecto (asegúrate que coincidan con tu .env)
+user = os.getenv('POSTGRES_USER', 'rugby_admin')
+password = os.getenv('POSTGRES_PASSWORD', 'Vir-24')
+database = os.getenv('POSTGRES_DB', 'rugby_db')
+
+# Si detecta DB_HOST=localhost (desde el script de aduana), lo usa. 
+# Si no hay variable, por defecto usa 'db' para Docker.
+host = os.getenv('DB_HOST', 'db') 
+
+SQLALCHEMY_DATABASE_URL = f"postgresql://{user}:{password}@{host}:5432/{database}"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
-# Generador de sesiones de base de datos para los endpoints
 def get_db():
     db = SessionLocal()
     try:

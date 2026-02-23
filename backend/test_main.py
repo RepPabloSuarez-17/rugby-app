@@ -6,4 +6,4 @@ def test_inicio_falso():
 def test_configuracion_api():
     # Aquí podrías importar tu 'app' de FastAPI y ver si responde
     from main import app
-    assert app.title == "Rugby App Secure" # O el título que tenga tu API
+    assert app.title == "Rugby App - Seguridad Blindada" # O el título que tenga tu API
