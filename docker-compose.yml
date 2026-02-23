@@ -43,7 +43,7 @@ services:
       - "80:80"   # Ahora entrarás por http://10.50.58.19 (puerto 80 por defecto)
       - "443:443" # Pero irá directamente al puerto seguro con certificados TSL
     volumes:
-      - ./frontend:/usr/share/nginx/html
+      - ./frontend:/usr/share/nginx/html:ro
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./nginx/certs:/etc/nginx/certs:ro
     depends_on:
