@@ -242,9 +242,8 @@ Note: The .env file is pre-configured in .gitignore to prevent it from being upl
 3. SSL/TLS Certificate Generation
 To enable mandatory HTTPS, generate certificates in the appropriate folder:
 
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 mkdir -p nginx/certs
+
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout nginx/certs/[cert_name].key -out nginx/certs/[cert_name].crt
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
