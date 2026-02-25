@@ -42,7 +42,7 @@ if [ $? -eq 0 ]; then
         echo "🚀 Todo OK. Sincronizando a GitHub..."
         git add .
         git commit -m "Fix: Test de conexión localhost validado"
-        git push origin main --force
+        git push origin main
         echo "🎉 ¡Hecho!"
     else
         echo "❌ ERROR: Web da Status $STATUS. Revisa Nginx."
