@@ -5,7 +5,7 @@ import os
 
 # --- LÓGICA DE CONEXIÓN DINÁMICA ---
 # Extraemos variables o usamos valores por defecto (asegúrate que coincidan con tu .env)
-# DB_HOST = os.getenv("DB_HOST", "db")
+DB_HOST = os.getenv("DB_HOST", "db")
 user = os.getenv('POSTGRES_USER', 'rugby_admin')
 password = os.getenv('POSTGRES_PASSWORD', 'Vir-24')
 database = os.getenv('POSTGRES_DB', 'rugby_db')
