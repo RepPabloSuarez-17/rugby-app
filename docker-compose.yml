@@ -26,6 +26,10 @@ services:
   # 3. API (Nuestra lógica en FastAPI con seguridad OWASP)
   api:
     build: ./backend
+    environment:
+      - DB_HOST=db  # <--- Dentro de Docker, la API busca el servicio llamado 'db'
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     ports:
       - "8000:8000"  # Mapeo: Acceso desde tu PC (8000) al contenedor (8000)
     env_file:
