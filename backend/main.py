@@ -30,7 +30,11 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60
 # Sincroniza las tablas
 models.Base.metadata.create_all(bind=database.engine)
 
-app = FastAPI(title="Rugby App - Seguridad Blindada")
+app = FastAPI(
+    title="Rugby App - Seguridad Blindada",
+    openapi_url="/api/openapi.json", # Ruta del JSON bajo /api
+    docs_url="/api/docs"             # Ruta de Swagger bajo /api
+)
 
 # 2. Unimos el limitador a la aplicación y manejamos el error de exceso
 app.state.limiter = limiter
