@@ -1,319 +1,166 @@
-🛡️ Especificaciones de Seguridad (Hardening & OWASP)
+🛡️ Seguridad y Cumplimiento (OWASP Top 10) Este proyecto ha sido auditado bajo los estándares de OWASP, implementando controles específicos para mitigar las vulnerabilidades más críticas en aplicaciones web modernas.
 
-Este proyecto no solo es funcional, sino que ha sido "blindado" siguiendo el principio de Defensa en Profundidad. A continuación, se detalla la base teórica de las protecciones implementadas.
+📊 Matriz de Mitigación ID Categoría OWASP Medida Técnica Implementada Estado A01 Broken Access Control Roles de usuario (Admin/User) y validación de PIN de 4 dígitos personal para cada cuenta.
 
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+✅A02 Cryptographic Failures Hashing de contraseñas con Bcrypt (Salt factor 12) y cifrado forzado en tránsito mediante TLS/SSL.
 
-1. Gestión de Identidad y Control de Acceso (A01:2021)
+✅A03 Injection Uso de SQLAlchemy ORM para parametrizar todas las consultas, neutralizando ataques de SQL Injection.
 
-La aplicación implementa un sistema de autenticación de múltiples factores (MFA) lógico:
+✅A05 Security Misconfiguration Hardening de Nginx con cabeceras HSTS, CSP, X-Content-Type y X-Frame-Options.
 
-Doble Factor de Autenticación (2FA): Al registrarse, el sistema genera un PIN único de 4 dígitos. Esto añade una capa de seguridad donde, incluso si la contraseña es comprometida, el atacante no puede acceder sin el PIN personal.
+✅A07 Identification & Auth Implementación de JWT (JSON Web Tokens) con firma criptográfica y Rate Limiting (5 intentos/min).
 
-Hashing Criptográfico: No guardamos contraseñas. Utilizamos el algoritmo bcrypt con un factor de sal (salt) para proteger los datos contra ataques de tablas arcoíris y colisiones.
+✅Exportar a Hojas de cálculo
 
-Tokens de Sesión (JWT): Implementamos JSON Web Tokens firmados para manejar sesiones sin estado (stateless), lo que evita el secuestro de sesiones tradicional basado en cookies.
+🏗️ Arquitectura de Defensa en Profundidad La aplicación no solo es código seguro, sino que reside en una infraestructura blindada mediante contenedores orquestados.
 
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Aislamiento de Red (Network Sandboxing) Todos los microservicios se comunican a través de una red privada virtual denominada rugby-net.
+Zero Trust: La base de datos PostgreSQL y el servidor Redis no exponen puertos al exterior; solo son accesibles para la API de FastAPI.
 
-2. Protección de la Capa de Transporte (HTTPS/TLS)
+Proxy Inverso: Nginx actúa como única puerta de enlace, filtrando el tráfico malicioso antes de que llegue al backend.
 
-Toda la comunicación entre el cliente y el servidor está cifrada para evitar ataques de Man-in-the-Middle (MitM):
+Principio de Menor Privilegio (Least Privilege) Usuario No-Root: El contenedor de la API ha sido configurado para correr bajo el usuario rugbyuser.
+Restricción de Ejecución: En caso de una brecha de seguridad, el atacante no tendría privilegios de administrador (root) para escalar posiciones dentro del servidor.
 
-Cifrado en Tránsito: Mediante certificados SSL/TLS, garantizamos que los datos viajen de forma privada.
+🛠️ Stack Tecnológico Profesional Capa Tecnología Función de Seguridad API FastAPI (Python 3.11) Validación estricta de esquemas de datos (Pydantic). 
+Proxy Nginx 1.29 Terminación SSL y cabeceras de seguridad OWASP. Database PostgreSQL 15 Almacenamiento persistente con acceso restringido por IP interna. 
+Cache Redis Manejo eficiente de sesiones y listas negras de tokens. DevSecOps GitHub Actions Pipeline de CI/CD para validación automática de integridad en cada push.
 
-HSTS (HTTP Strict Transport Security): Esta cabecera informa al navegador que solo debe comunicarse con este servidor mediante HTTPS, evitando ataques de degradación de protocolo (Downgrade attacks).
+🛡️ Rugby App Secure - Manual de Proyecto BlindadoRugby App Secure es un ecosistema de gestión deportiva diseñado bajo el paradigma de Defensa en Profundidad. 
+La aplicación utiliza microservicios aislados para garantizar que la información de los jugadores y usuarios esté protegida contra los ataques más comunes de la web moderna.
 
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+🛠️ Stack Tecnológico y Ubicación de ArchivosCapaTecnologíaUbicación del ArchivoFunción PrincipalBackendFastAPI (Python 3.11)rugby-app/backend/main.pyLógica de negocio, JWT y Rate Limiting. 
+FrontendJS Vanilla / HTML5rugby-app/frontend/Interfaz de usuario y consumo de API. Base de DatosPostgreSQL 15 rugby-app/docker-compose.yml
 
-3. Seguridad en el Servidor Web (Nginx Hardening)
+Almacenamiento persistente de datos. Proxy/WebNginxrugby-app/nginx/nginx.confCifrado SSL/TLS y seguridad de cabeceras.AutomatizaciónBash Script./verificar_y_subir.shValidación local e integridad CI/CD.
 
-Nginx no solo sirve la web, actúa como un "escudo" mediante cabeceras de seguridad OWASP:
+🏗️ Arquitectura de Infraestructura (Docker)El proyecto se despliega mediante Docker Compose, creando una red virtual privada donde los servicios están segmentados.
+Red Aislada (rugby-net): Subred 172.20.0.0/16 que impide que la base de datos sea vista desde el exterior.IPs Estáticas: Cada servicio tiene una IP fija para evitar ataques de suplantación interna:
+DB: 172.20.0.10 
+Redis: 172.20.0.20 
+API: 172.20.0.30 
+Nginx: 172.20.0.40
 
-CSP (Content Security Policy): Una política estricta que define qué scripts, estilos e imágenes se pueden cargar. Esto mitiga casi por completo ataques de XSS (Cross-Site Scripting) al prohibir la ejecución de código inyectado desde fuentes no autorizadas.
+🛡️ Implementación de Seguridad (Hardening)1. Gestión de Identidad (OWASP A01)Doble Factor Lógico (PIN): Al registrarse en main.py, el sistema genera un PIN único (random.randint(1000, 9999)) 
+que se almacena junto al hash de la contraseña.
 
-X-Content-Type-Options: Previene el "MIME-sniffing", obligando al navegador a respetar el tipo de contenido enviado por el servidor y evitando que ejecute archivos maliciosos disfrazados de imágenes.
+Hashing Criptográfico: Las contraseñas se cifran usando Bcrypt con un factor de sal adecuado en el backend.2. Control de Tasa (Rate Limiting)Protección de Login: 
+El endpoint /token en main.py utiliza slowapi para limitar los intentos a 5 por minuto, neutralizando ataques de fuerza bruta.
 
-X-Frame-Options: Establecida en DENY para evitar el Clickjacking, impidiendo que la aplicación sea embebida en marcos (iframes) de sitios maliciosos.
+Seguridad de Capa de TransporteCifrado SSL/TLS: Configurado en nginx.conf y guardado en nginx/certs/, garantizando que toda comunicación sea HTTPS.Cabeceras HSTS: Obliga al navegador a usar siempre conexiones seguras.
+🚀 Guía de Instalación Paso a PasoPaso 1: Clonar y Preparar SecretosDescarga el código y configura las variables de entorno para cumplir con OWASP A05 (evitar subir secretos al código). 
+git clone https://github.com/RepPabloSuarez-17/rugby-app.git cd rugby-app
 
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Crear archivo .env en la raíz
+echo "POSTGRES_USER=rugby_admin" > .env echo "POSTGRES_PASSWORD=Vir-24" >> .env echo "POSTGRES_DB=rugby_db" >> .env echo "JWT_SECRET=tu_clave_maestra" >> .env
 
-4. Control de Tasa y Fuerza Bruta (Rate Limiting)
+Paso 2: Generar Certificados de SeguridadCrea los certificados necesarios para que Nginx levante el sitio de forma segura.
 
-Para proteger los puntos de entrada (login y registro), hemos implementado:
+mkdir -p nginx/certs openssl req -x509 -nodes -days 365 -newkey rsa:2048
+-keyout nginx/certs/rugby.key -out nginx/certs/rugby.crt
 
-Limitación de Peticiones: El backend restringe a un máximo de 5 intentos por minuto por dirección IP. Esto hace que los ataques de fuerza bruta automatizados sean ineficaces.
+Paso 3: Validación con el "Script de Aduana"Antes de realizar cualquier despliegue final o subida a GitHub, ejecuta el script de integridad local. chmod +x verificar_y_subir.sh
 
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+./verificar_y_subir.sh
 
-5. Aislamiento y Menor Privilegio (Docker Security)
+¿Qué hace este script? Reinicia la base de datos db para asegurar puertos limpios.Espera 12 segundos y verifica la salud de las tablas con una consulta SQL directa.
 
-La seguridad no se limita al código, también al entorno de ejecución:
+Ejecuta los tests automáticos con pytest.Realiza un curl de seguridad a localhost para validar el estado de Nginx.
 
-Usuario No-Root: Dentro del contenedor Docker, la aplicación no corre con privilegios de administrador. Si un atacante lograra vulnerar la API, sus acciones estarían limitadas por los permisos del usuario rugbyuser.
+📊 Manual de Uso de la AplicaciónRegistro: Crea un usuario en la pestaña "Nuevo Usuario". El sistema te entregará un PIN naranja; anótalo.
 
-Segmentación de Red: Los contenedores están aislados en una red privada virtual (rugby-net). La base de datos no es accesible desde el exterior, solo la API puede hablar con ella.
+Acceso: Introduce tu Usuario, Contraseña y el PIN. El sistema generará un Token JWT que se guarda en el localStorage del navegador.
 
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Gestión: Una vez dentro, podrás dar de alta jugadores en la base de datos PostgreSQL y ver la plantilla actualizada en tiempo real.
+Configuración Final Verificada: Puerto 443 expuesto, Puerto 8000 y 5432 protegidos tras el firewall de Docker.
 
-6. Integridad y Pruebas (CI/CD)
+Esta es la sección de Gestión de Copias de Seguridad diseñada específicamente para tu infraestructura. En un entorno profesional blindado, la disponibilidad de los datos es tan importante como su confidencialidad.
 
-Implementamos Integridad de Código mediante GitHub Actions:
+Añade este bloque al final de tu README.md para documentar cómo proteger la información de la plantilla ante fallos del sistema.
 
-Pruebas Automatizadas: Cada cambio en el código es validado por una suite de tests antes de ser considerado seguro para producción, asegurando que nuevas funcionalidades no rompan las protecciones existentes.
+💾 Gestión de Copias de Seguridad (Backup & Restore)
+Para garantizar la disponibilidad (OWASP A00) de la información de los jugadores, hemos definido protocolos de respaldo para el volumen persistente postgres_data.
 
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Copia de Seguridad en Caliente (Hot Backup) Este método permite generar un archivo .sql sin detener los contenedores. Utiliza la herramienta pg_dump interna de la imagen postgres:15-alpine.
+Comando para exportar:
 
-🏉 Rugby App Secure - Manual de Despliegue Seguro
+Genera un volcado de la base de datos 'rugby_db'
+sudo docker exec -t rugby-app-db-1 pg_dump -U rugby_admin rugby_db > backup_rugby_$(date +%F).sql Archivo: El backup se guardará en la raíz de tu VM con la fecha actual.
 
-Este proyecto es una plataforma de gestión de rugby blindada bajo estándares OWASP. Utiliza una arquitectura de microservicios orquestada con Docker, garantizando el aislamiento de datos y la protección contra ataques comunes.
+Seguridad: El archivo generado contiene las sentencias para reconstruir todas las tablas y registros.
 
-📋 Requisitos del Sistema
+Restauración de Datos En caso de corrupción de datos o migración de servidor, sigue estos pasos:
+Asegúrate de que el contenedor db esté corriendo.
 
-Antes de iniciar, el sistema debe contar con:
+Ejecuta la importación del archivo:
 
-Docker Engine v20.10+ y Docker Compose v2.0+ (evita versiones antiguas para prevenir errores de compatibilidad).
+cat backup_rugby_2026-03-09.sql | sudo docker exec -i rugby-app-db-1 psql -U rugby_admin -d rugby_db
 
-Git para la gestión del código.
+Copia de Seguridad del Volumen (Cold Backup)
+Si necesitas hacer una copia física de los archivos de la base de datos almacenados en /var/lib/postgresql/data:
 
-OpenSSL para la generación de certificados de seguridad.
+Detener servicios para evitar inconsistencias
+sudo docker compose stop db
 
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Crear un comprimido del volumen físico
+sudo tar -cvzf backup_volumen_postgres.tar.gz ./postgres_data
 
-🚀 Guía de Instalación Paso a Paso
+Reiniciar servicio
+sudo docker compose start db
 
-1. Clonar el Repositorio
+🛡️ Verificación de Integridad Post-Backup Después de restaurar una copia, es obligatorio ejecutar el Script de Aduana para confirmar que la aplicación sigue siendo funcional:
 
-Descarga el código fuente y accede al directorio raíz:
+./verificar_y_subir.sh
 
-git clone https://github.com/[tu_nombre_github]/[nombre_app]-app.git
+Si el script devuelve ✅ Base de datos operativa, la restauración ha sido un éxito.
 
-cd nombre_app
+🚀 Instalación y Puesta en Marcha Sigue estos pasos para desplegar el ecosistema Rugby App Secure en tu propia infraestructura. Esta guía garantiza que las medidas de seguridad se activen desde el primer segundo.
 
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+📋 Requisitos Previos Antes de comenzar, asegúrate de tener instalado:
 
-2. Configuración de Secretos (OWASP A05)
+Docker Engine v20.10+ y Docker Compose v2.0+.
 
-Crea un archivo .env en la raíz para gestionar credenciales sensibles sin exponerlas en el código.
+Git para la gestión de versiones.
 
-# Contenido recomendado para .env
+OpenSSL para la generación de la capa de cifrado.
 
-POSTGRES_USER=[tu_usuario_db]
+1️⃣ Clonación del Repositorio Descarga el código fuente y accede al directorio raíz del proyecto:
 
-POSTGRES_PASSWORD=[tu_contraseña_db]
+git clone https://github.com/RepPabloSuarez-17/rugby-app.git cd rugby-app
 
-POSTGRES_DB=[tu_nombre_db]
+2️⃣ Configuración de Secretos (OWASP A05) Crea un archivo .env para gestionar tus credenciales de forma aislada del código.
 
-JWT_SECRET=tu_clave_secreta_maestra
+Archivo: .env
+POSTGRES_USER=rugby_admin POSTGRES_PASSWORD=Vir-24 POSTGRES_DB=rugby_db JWT_SECRET=tu_clave_secreta_maestra_2026 Nota de Seguridad: El archivo .env está incluido en .gitignore para evitar filtraciones en repositorios públicos.
 
-Nota: El archivo .env ya está pre-configurado en el .gitignore para no ser subido a GitHub.
+3️⃣ Generación de Certificados SSL (HTTPS) Para habilitar el túnel cifrado en Nginx, genera los certificados en la carpeta correspondiente:
 
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+mkdir -p nginx/certs openssl req -x509 -nodes -days 365 -newkey rsa:2048
+-keyout nginx/certs/rugby.key
+-out nginx/certs/rugby.crt Este paso es obligatorio para que el contenedor frontend arranque correctamente.
 
-3. Generación de Certificados SSL/TLS
+4️⃣ Validación e Integridad (Script de Aduana) No lances la aplicación sin antes verificar que todo el "blindaje" es funcional. Ejecuta el script de validación automatizada:
 
-Para habilitar el cifrado HTTPS (obligatorio en esta app), genera los certificados en la carpeta correspondiente:
+chmod +x verificar_y_subir.sh ./verificar_y_subir.sh ¿Qué está ocurriendo internamente?:
 
-mkdir -p nginx/certs
+Reinicio de DB: Se levanta una instancia limpia de Postgres.
 
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout nginx/certs/[tu_nombre_de_certificado].key -out nginx/certs/[tu_nombre_de_certificado].crt
+Health Check: El script espera 12 segundos y verifica las tablas mediante SQL.
 
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Pruebas Pytest: Se valida la lógica de la API y la conexión a la base de datos.
 
-4. Despliegue de la Infraestructura
+CURL Check: Se verifica que Nginx responde con un estado 200 OK vía HTTPS.
 
-Levanta los 4 servicios integrados (PostgreSQL, Redis, FastAPI y Nginx) en su red interna aislada:
+5️⃣ Lanzamiento Final
 
-sudo docker compose up -d --build
+Una vez que el script de aduana dé el visto bueno (✅ Todo OK), la aplicación estará lista en segundo plano:
 
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+sudo docker-compose up -d --build
 
-🛡️ Medidas de Seguridad Implementadas
+🔍 Verificación del Despliegue Para confirmar que los 4 servicios están operativos y aislados en la red rugby-net, ejecuta:
 
-A. Capa de Infraestructura y Red
+sudo docker ps Acceso Final:
 
-Red Privada Aislada: Los servicios se comunican a través de la red rugby-net (172.20.0.0/16).
+Frontend: https://localhost (o tu IP asignada).
 
-IPs Fijas: Cada contenedor tiene asignada una IP estática interna para evitar ataques de redirección.
-
-Usuario No-Root: El contenedor de la API corre bajo el usuario rugbyuser, minimizando riesgos en caso de brecha.
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-🛡️ Security Specifications (Hardening & OWASP)
-This project is not only functional but has been "hardened" following the Defense in Depth principle. Below are the theoretical foundations of the implemented protections.
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-1. Identity Management and Access Control (A01:2021)
-The application implements a logical Multi-Factor Authentication (MFA) system:
-
-Two-Factor Authentication (2FA): Upon registration, the system generates a unique 4-digit PIN. This adds a security layer where, even if a password is compromised, an attacker cannot gain access without the personal PIN.
-
-Cryptographic Hashing: We do not store plain-text passwords. We use the bcrypt algorithm with a salt factor to protect data against rainbow table and collision attacks.
-
-Session Tokens (JWT): We implement signed JSON Web Tokens to handle stateless sessions, preventing traditional cookie-based session hijacking.
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-2. Transport Layer Protection (HTTPS/TLS)
-All communication between the client and the server is encrypted to prevent Man-in-the-Middle (MitM) attacks:
-
-Encryption in Transit: Through SSL/TLS certificates, we ensure that data travels privately.
-
-HSTS (HTTP Strict Transport Security): This header informs the browser to only communicate with this server via HTTPS, preventing protocol downgrade attacks.
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-3. Web Server Security (Nginx Hardening)
-Nginx acts as a "shield" using OWASP security headers:
-
-CSP (Content Security Policy): A strict policy defining which scripts, styles, and images can be loaded. This nearly eliminates XSS (Cross-Site Scripting) attacks by prohibiting the execution of injected code from unauthorized sources.
-
-X-Content-Type-Options: Prevents "MIME-sniffing," forcing the browser to respect the content type sent by the server and preventing it from executing malicious files disguised as images.
-
-X-Frame-Options: Set to DENY to prevent Clickjacking, stopping the application from being embedded in iframes on malicious sites.
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-4. Rate Limiting and Brute Force Control
-To protect entry points (login and registration), we have implemented:
-
-Request Throttling: The backend restricts access to a maximum of 5 attempts per minute per IP address. This renders automated brute-force attacks ineffective.
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-5. Isolation and Least Privilege (Docker Security)
-Security extends to the execution environment:
-
-Non-Root User: Inside the Docker container, the application does not run with administrative privileges. If an attacker compromises the API, their actions are limited by the permissions of the rugbyuser.
-
-Network Segmentation: Containers are isolated in a virtual private network (rugby-net). The database is not accessible from the outside; only the API can communicate with it.
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-6. Integrity and Testing (CI/CD)
-We implement code integrity through GitHub Actions:
-
-Automated Testing: Every code change is validated by a test suite before being considered production-ready, ensuring that new features do not break existing security protections.
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-🏉 Rugby App Secure - Deployment Manual
-This project is a rugby management platform hardened under OWASP standards. It uses a microservices architecture orchestrated with Docker, ensuring data isolation and protection against common attacks.
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-📋 System Requirements
-Before starting, ensure the system has:
-
-Docker Engine v20.10+ and Docker Compose v2.0+ (avoid older versions to prevent compatibility errors).
-
-Git for code management.
-
-OpenSSL for security certificate generation.
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-🚀 Step-by-Step Installation Guide
-1. Clone the Repository
-   
-Download the source code and enter the root directory:
-
-git clone https://github.com/[your_github_username]/[app_name]-app.git
-
-cd app_name
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-2. Secret Configuration (OWASP A05)
-   
-Create a .env file in the root to manage sensitive credentials without exposing them in the code.
-
-# Recommended .env content
-POSTGRES_USER=[your_db_user]
-POSTGRES_PASSWORD=[your_db_password]
-POSTGRES_DB=[your_db_name]
-JWT_SECRET=your_master_secret_key
-Note: The .env file is pre-configured in .gitignore to prevent it from being uploaded to GitHub.
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-3. SSL/TLS Certificate Generation
-To enable mandatory HTTPS, generate certificates in the appropriate folder:
-
-mkdir -p nginx/certs
-
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout nginx/certs/[cert_name].key -out nginx/certs/[cert_name].crt
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-4. Infrastructure Deployment
-Launch the 4 integrated services (PostgreSQL, Redis, FastAPI, and Nginx) in their isolated network:
-sudo docker compose up -d --build
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-🛠️ Validation Environment Setup (Virtual Machine)
-To ensure the code is secure and functional before reaching the public repository, you have configured a Local Continuous Integrity environment based on these pillars:
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-1. Execution Environment and Dependencies
-Your VM acts as a "mirror" of the Docker production environment:
-
-Docker Engine & Compose V2: Installed to support the orchestration of the 4 services.
-
-Python 3.11 Environment: Configured to run pytest and necessary libraries like httpx and sqlalchemy.
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-2. The Custom Script: verificar_y_subir.sh
-This script acts as the final security filter, automating total verification before allowing a push:
-
-Clean Restart: Stops previous instances and launches the DB in isolation to ensure port 5432 is free for testing.
-
-DB Health Check: Implements a 12-second sleep and a direct SQL query to confirm tables were created correctly.
-
-Code Integrity Tests: Runs pytest on the backend. Any failure stops the process immediately (exit 1), preventing errors from reaching GitHub.
-
-Web Server Validation: Uses curl on port 443 (HTTPS) to verify Nginx responds with 200 OK and valid SSL certificates.
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-3. Hardened Synchronization with GitHub
-Once the local script gives the "green light," the upload is automated:
-
-Git Automation: Executes git add ., git commit, and git push automatically.
-
-Secret Protection: Certificates and .env files are never indexed by Git, complying with OWASP A05.
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-🔐 CI/CD Secret Management (GitHub Secrets)
-To comply with OWASP A05, sensitive data (like JWT_SECRET) must never be written directly in Workflow files.
-
-1. GitHub Secrets Interface
-Configure these in your GitHub repository under Settings > Secrets and variables > Actions:
-
-POSTGRES_USER: Database user defined in database.py.
-
-POSTGRES_PASSWORD: Your secure database password.
-
-JWT_SECRET: Master key for signing security tokens.
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-2. Workflow Injection
-In tests.yml, secrets are invoked using ${{ secrets.SECRET_NAME }}. This allows pytest to access the test database without exposing real passwords.
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-🛠️ Local vs. GitHub Workflow
-Step 1 (Your VM): Run verificar_y_subir.sh. It uses your local .env (hidden from Git) to validate the VM environment.
-
-Step 2 (GitHub): Upon push, GitHub Actions takes over. It uses GitHub Secrets to run pytest and provide the final "Build Success" badge.
-
-Security Benefit: This design ensures that anyone cloning the repo cannot see your keys, as neither the .env nor the GitHub Secrets are visible to third parties.
-
-Final Access: Once deployed, access the platform at https://[your_ip].
+API Docs: https://[ip_maquina / o_ip_app]/api/docs.
