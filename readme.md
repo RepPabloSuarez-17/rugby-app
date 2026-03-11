@@ -172,7 +172,7 @@ sudo docker exec -it rugby-app-db-1 psql -U rugby_admin -d rugby_db
 ---
 
 ## Pagina de pruebas app
-![alt text](image.png)
+![Pruebas](image-1.png)
 
 ## Ciclo de Integridad (Script de Aduana)
 **Archivo:** `verificar_y_subir.sh`
