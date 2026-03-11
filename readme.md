@@ -95,26 +95,6 @@ Despliega la infraestructura completa en segundo plano:
 sudo docker compose up -d --build
 ```
 
-### 2. Ciclo de Integridad (Script de Aduana)Archivo: 
-Verificar_y_subir.shEste script garantiza que ninguna versión insegura o corrupta llegue al despliegue final:Reinicio DB: Levanta una instancia limpia de Postgres para asegurar puertos libres.SQL Check: Valida la salud de las tablas ejecutando consultas internas.
-
-Pytest: Ejecuta la suite de pruebas unitarias del backend.CURL Check: Verifica la respuesta HTTPS del servidor Nginx.
-
-Comandos Rápidos de MantenimientoAcción Comando Limpieza Total 
-
-```bash
-sudo docker compose down -v
-
-Reinicio Forzado
-sudo docker compose up -d --build --force-recreate
-
-Ver Logs API
-sudo docker logs -f rugby-app-api-1
-
-Entrar a DB
-sudo docker exec -it rugby-app-db-1 psql -U rugby_admin -d rugby_db
-```
-
 ## Detalle Técnico de la App
 Esta sección explica la interacción profunda entre los componentes del backend para garantizar la integridad del sistema.
 
@@ -149,7 +129,7 @@ Configuración detallada para el despliegue correcto de la infraestructura.
 
 ---
 
-## FAQ - Solución de Problemas Comunes
+## Preguntas - Soluciones de Problemas Comunes
 
 **¿Por qué veo un error 502 Bad Gateway?** Generalmente ocurre porque el contenedor `api` ha fallado al arrancar. Revisa los logs con `sudo docker logs rugby-app-api-1`. Suele deberse a una clave incorrecta en el `.env` o a que la base de datos aún no está lista para recibir conexiones.
 
@@ -157,8 +137,59 @@ Configuración detallada para el despliegue correcto de la infraestructura.
 
 **¿Por qué Swagger (/api/docs) me da error de carga?** Asegúrate de acceder a través de la ruta del proxy: `https://[IP]/api/docs`. Si intentas acceder directamente al puerto 8000, la configuración de Nginx o el aislamiento de red de Docker bloquearán los recursos estáticos.
 
+**¿Ciclo de Integridad (Script de Aduana)Archivo:?**
+
+Verificar_y_subir.sh
+Este script garantiza que ninguna versión insegura o corrupta llegue al despliegue final:
+
+Reinicio DB: Levanta una instancia limpia de Postgres para asegurar puertos libres.
+
+SQL Check: Valida la salud de las tablas ejecutando consultas internas.
+
+Pytest: Ejecuta la suite de pruebas unitarias del backend.CURL Check: Verifica la respuesta HTTPS del servidor Nginx.
+
+Comandos Rápidos de MantenimientoAcción Comando Limpieza Total 
+
+```bash
+sudo docker compose down -v
+
+Reinicio Forzado
+sudo docker compose up -d --build --force-recreate
+
+Ver Logs API
+sudo docker logs -f rugby-app-api-1
+
+Entrar a DB
+sudo docker exec -it rugby-app-db-1 psql -U rugby_admin -d rugby_db
+```
+
 ---
 
 ## Notas Finales y Créditos
 * **Licencia**: Este proyecto se distribuye bajo fines educativos para la demostración de despliegues seguros en entornos Docker.
 * **Autor**: Desarrollado como proyecto de implementación de seguridad (SecDevOps).
+
+---
+
+## Pagina de pruebas app
+![alt text](image.png)
+
+## Ciclo de Integridad (Script de Aduana)
+**Archivo:** `verificar_y_subir.sh`
+
+Este script garantiza que ninguna versión insegura o corrupta llegue al despliegue final. Es obligatorio ejecutarlo antes de realizar cualquier subida al repositorio.
+
+### Flujo de Validación Paso a Paso
+1. **Preparación**: Instalación automática de dependencias de test.
+2. **Hard Reset DB**: Reinicio del servicio de PostgreSQL y espera de 12 segundos para estabilidad.
+3. **Health Check SQL**: Verificación interna de la existencia de la tabla `jugadores`.
+4. **Unit Testing**: Ejecución de la suite `pytest` para validar lógica de negocio y seguridad.
+5. **Web Check**: Validación final del estado `200 OK` vía HTTPS/Nginx.
+6. **Auto-Push**: Si todas las fases son exitosas, sincroniza los cambios con GitHub automáticamente.
+
+### Cómo ejecutar el script
+Asegúrate de otorgar permisos de ejecución antes del primer uso:
+
+```bash
+chmod +x verificar_y_subir.sh
+./verificar_y_subir.sh
